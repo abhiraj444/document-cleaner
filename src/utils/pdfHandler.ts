@@ -5,6 +5,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import { DocumentPage, ProcessingSettings } from '../types/document';
@@ -12,10 +13,9 @@ import { analyzeDocumentImage } from './analyzer';
 import { calculateRecommendedSettings, generateCandidatePresets } from './optimizer';
 import { processDocumentImage } from './imageProcessor';
 
-// Configure PDF.js worker
-if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-  // Using reliable cdnjs worker matching version or fallback
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.10.38'}/pdf.worker.min.mjs`;
+// Configure local PDF.js worker without external CDN dependencies
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 }
 
 /**
@@ -53,7 +53,9 @@ async function loadPdfFile(
   onProgress?: (msg: string, current: number, total: number) => void
 ): Promise<DocumentPage[]> {
   const arrayBuffer = await file.arrayBuffer();
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(arrayBuffer),
+  });
   const pdf = await loadingTask.promise;
   const numPages = pdf.numPages;
   const pages: DocumentPage[] = [];
